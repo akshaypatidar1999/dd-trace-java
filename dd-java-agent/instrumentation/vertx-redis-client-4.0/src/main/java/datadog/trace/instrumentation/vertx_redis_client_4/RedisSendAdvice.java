@@ -5,6 +5,7 @@ import static datadog.trace.bootstrap.instrumentation.api.AgentTracer.activeSpan
 import static datadog.trace.bootstrap.instrumentation.api.AgentTracer.captureSpan;
 import static datadog.trace.instrumentation.vertx_redis_client_4.VertxRedisClientDecorator.DECORATE;
 
+import datadog.trace.api.Pair;
 import datadog.trace.bootstrap.CallDepthThreadLocalMap;
 import datadog.trace.bootstrap.ContextStore;
 import datadog.trace.bootstrap.InstrumentationContext;
@@ -16,7 +17,6 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.net.SocketAddress;
 import io.vertx.redis.client.Command;
 import io.vertx.redis.client.RedisAPI;
@@ -30,15 +30,12 @@ import net.bytebuddy.asm.Advice;
 public class RedisSendAdvice {
   @Advice.OnMethodEnter(suppress = Throwable.class)
   public static AgentScope beforeSend(
-      @Advice.Argument(value = 0, readOnly = false) Request request,
-      @Advice.Argument(value = 1, readOnly = false) Handler<AsyncResult<Response>> handler)
+      @Advice.Argument(value = 0, readOnly = false) Request request)
       throws Throwable {
-    if (null == handler || handler instanceof ResponseHandlerWrapper) {
-      return null;
-    }
-    ContextStore<Request, Boolean> ctxt = InstrumentationContext.get(Request.class, Boolean.class);
-    Boolean handled = ctxt.get(request);
-    if (null != handled && handled) {
+
+    ContextStore<Request, Pair> ctxt = InstrumentationContext.get(Request.class, Pair.class);
+    Pair<Boolean, AgentScope.Continuation> pair = ctxt.get(request);
+    if (pair != null && pair.hasLeft() && pair.getLeft() != null && pair.getLeft()) {
       return null;
     }
     // Create a shallow copy of the Request here to make sure that reused Requests get spans
@@ -46,7 +43,7 @@ public class RedisSendAdvice {
       // Other library code do this downcast, so we can do it as well
       request = (Request) ((RequestImpl) request).clone();
     }
-    ctxt.put(request, Boolean.TRUE);
+    ctxt.put(request, Pair.of(Boolean.TRUE, null));
     // If we had already wrapped the innermost handler in the RedisAPI call, then we should
     // not wrap it again here. See comment in RedisAPICallAdvice
     if (CallDepthThreadLocalMap.incrementCallDepth(RedisAPI.class) > 0) {
@@ -55,18 +52,21 @@ public class RedisSendAdvice {
 
     AgentSpan parentSan = activeSpan();
     AgentScope.Continuation parentContinuation = null == parentSan ? null : captureSpan(parentSan);
+    ctxt.put(request, Pair.of(Boolean.TRUE, parentContinuation));
     final AgentSpan clientSpan =
         DECORATE.startAndDecorateSpan(
             request.command(), InstrumentationContext.get(Command.class, UTF8BytesString.class));
-
-    handler = new ResponseHandlerWrapper(handler, clientSpan, parentContinuation);
     return activateSpan(clientSpan, true);
   }
 
   @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
   public static void afterSend(
+      @Advice.Argument(value = 0, readOnly = false) Request request,
+      @Advice.Return Future<Response> responseFuture,
       @Advice.Enter final AgentScope clientScope,
       @Advice.This final Object thiz) {
+    Pair<Boolean, AgentScope.Continuation> pair = InstrumentationContext.get(Request.class, Pair.class).get(request);
+    responseFuture.onComplete(new ResponseHandlerWrapper(clientScope.span(), pair.getRight()));
     if (thiz instanceof RedisConnection) {
       final SocketAddress socketAddress =
           InstrumentationContext.get(RedisConnection.class, SocketAddress.class)

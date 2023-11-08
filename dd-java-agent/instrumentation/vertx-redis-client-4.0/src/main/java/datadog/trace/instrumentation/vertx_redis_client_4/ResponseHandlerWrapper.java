@@ -7,16 +7,13 @@ import io.vertx.core.Handler;
 import io.vertx.redis.client.Response;
 
 public class ResponseHandlerWrapper implements Handler<AsyncResult<Response>> {
-  private final Handler<AsyncResult<Response>> handler;
   public final AgentSpan clientSpan;
   private final AgentScope.Continuation parentContinuation;
   private boolean handled = false;
 
   public ResponseHandlerWrapper(
-      final Handler<AsyncResult<Response>> handler,
       final AgentSpan clientSpan,
       final AgentScope.Continuation parentContinuation) {
-    this.handler = handler;
     this.clientSpan = clientSpan;
     this.parentContinuation = parentContinuation;
   }
@@ -39,7 +36,6 @@ public class ResponseHandlerWrapper implements Handler<AsyncResult<Response>> {
         if (null != parentContinuation) {
           scope = parentContinuation.activate();
         }
-        handler.handle(event);
       } finally {
         if (null != scope) {
           scope.close();

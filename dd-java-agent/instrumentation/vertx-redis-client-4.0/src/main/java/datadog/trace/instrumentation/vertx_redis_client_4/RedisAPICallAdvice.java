@@ -112,7 +112,7 @@ public class RedisAPICallAdvice {
     */
     scope = activateSpan(clientSpan, true);
     ResponseHandlerWrapper respHandler =
-        new ResponseHandlerWrapper(handler, clientSpan, parentContinuation);
+        new ResponseHandlerWrapper(clientSpan, parentContinuation);
     handler = respHandler;
 
     switch (position) {
