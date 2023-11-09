@@ -32,7 +32,7 @@ public class RedisSendAdvice {
   public static AgentScope beforeSend(
       @Advice.Argument(value = 0, readOnly = false) Request request)
       throws Throwable {
-
+    DECORATE.logging("Request", request);
     ContextStore<Request, Pair> ctxt = InstrumentationContext.get(Request.class, Pair.class);
     Pair<Boolean, AgentScope.Continuation> pair = ctxt.get(request);
     if (pair != null && pair.hasLeft() && pair.getLeft() != null && pair.getLeft()) {
@@ -50,8 +50,9 @@ public class RedisSendAdvice {
       return AgentTracer.NoopAgentScope.INSTANCE;
     }
 
-    AgentSpan parentSan = activeSpan();
-    AgentScope.Continuation parentContinuation = null == parentSan ? null : captureSpan(parentSan);
+    AgentSpan parentSpan = activeSpan();
+    DECORATE.logging("Parent span", parentSpan);
+    AgentScope.Continuation parentContinuation = parentSpan == null ? null : captureSpan(parentSpan);
     ctxt.put(request, Pair.of(Boolean.TRUE, parentContinuation));
     final AgentSpan clientSpan =
         DECORATE.startAndDecorateSpan(
@@ -66,6 +67,7 @@ public class RedisSendAdvice {
       @Advice.Enter final AgentScope clientScope,
       @Advice.This final Object thiz) {
     Pair<Boolean, AgentScope.Continuation> pair = InstrumentationContext.get(Request.class, Pair.class).get(request);
+    DECORATE.logging("Parent continuation", pair.getRight());
     responseFuture.onComplete(new ResponseHandlerWrapper(clientScope.span(), pair.getRight()));
     if (thiz instanceof RedisConnection) {
       final SocketAddress socketAddress =
