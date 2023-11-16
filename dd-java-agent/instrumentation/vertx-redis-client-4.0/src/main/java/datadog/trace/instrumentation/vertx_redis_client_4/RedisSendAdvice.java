@@ -68,7 +68,9 @@ public class RedisSendAdvice {
       @Advice.This final Object thiz) {
     Pair<Boolean, AgentScope.Continuation> pair = InstrumentationContext.get(Request.class, Pair.class).get(request);
     DECORATE.logging("Parent continuation", pair.getRight());
-    responseFuture.onComplete(new ResponseHandlerWrapper(clientScope.span(), pair.getRight()));
+    if (clientScope != null){
+      responseFuture.onComplete(new ResponseHandlerWrapper(clientScope.span(), pair.getRight()));
+    }
     if (thiz instanceof RedisConnection) {
       final SocketAddress socketAddress =
           InstrumentationContext.get(RedisConnection.class, SocketAddress.class)
@@ -79,7 +81,7 @@ public class RedisSendAdvice {
         DECORATE.setPeerPort(span, socketAddress.port());
       }
     }
-    if (null != clientScope) {
+    if (clientScope != null) {
       CallDepthThreadLocalMap.decrementCallDepth(RedisAPI.class);
       clientScope.close();
     }

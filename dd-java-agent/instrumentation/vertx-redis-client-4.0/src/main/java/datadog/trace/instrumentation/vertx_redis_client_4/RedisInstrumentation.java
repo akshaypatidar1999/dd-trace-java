@@ -12,6 +12,7 @@ import static net.bytebuddy.matcher.ElementMatchers.isConstructor;
 import static net.bytebuddy.matcher.ElementMatchers.isDeclaredBy;
 import static net.bytebuddy.matcher.ElementMatchers.isMethod;
 import static net.bytebuddy.matcher.ElementMatchers.isPublic;
+import static net.bytebuddy.matcher.ElementMatchers.isVirtual;
 import static net.bytebuddy.matcher.ElementMatchers.returns;
 import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
@@ -43,6 +44,10 @@ public class RedisInstrumentation extends Instrumenter.Tracing
   public String[] knownMatchingTypes() {
     return new String[]{
         "io.vertx.redis.client.Redis",
+        "io.vertx.redis.client.impl.BaseRedisClient",
+        "io.vertx.redis.client.impl.RedisClient",
+        "io.vertx.redis.client.impl.RedisClusterClient",
+        "io.vertx.redis.client.impl.RedisSentinelClient",
         "io.vertx.redis.client.impl.RedisStandaloneConnection",
         "io.vertx.redis.client.RedisConnection",
         "io.vertx.redis.client.impl.RedisClusterConnection"
@@ -53,7 +58,7 @@ public class RedisInstrumentation extends Instrumenter.Tracing
   public void adviceTransformations(AdviceTransformation transformation) {
     transformation.applyAdvice(
         isPublic()
-            .and(isDeclaredBy(named("io.vertx.redis.client.impl.RedisStandaloneConnection")))
+//            .and(isDeclaredBy(named("io.vertx.redis.client.impl.RedisStandaloneConnection")))
             .and(named("send"))
             .and(takesArguments(1))
             .and(takesArgument(0, named("io.vertx.redis.client.Request")))
@@ -70,7 +75,8 @@ public class RedisInstrumentation extends Instrumenter.Tracing
         isMethod()
             .and(isPublic())
             .and(named("connect"))
-            .and(returns(named("io.vertx.redis.client.Redis"))),
+            .and(takesArguments(0))
+            .and(returns(named("io.vertx.core.Future"))),
         packageName + ".RedisConnectAdvice");
   }
 }

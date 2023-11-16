@@ -12,7 +12,7 @@ import static datadog.trace.agent.test.utils.TraceUtils.runUnderTrace
 import static datadog.trace.bootstrap.instrumentation.api.AgentTracer.activeSpan
 import static datadog.trace.agent.test.utils.TraceUtils.basicSpan
 
-class VertxRedisRxForkedTest extends VertxRedisTestBase {
+class Vertx4RedisRxForkedTest extends Vertx4RedisTestBase {
 
   @Shared
   @AutoCleanup
@@ -33,19 +33,19 @@ class VertxRedisRxForkedTest extends VertxRedisTestBase {
     assert redisConnection
   }
 
-//  def "set and get command"() {
-//    when:
-//    def set = runWithParentAndHandler(Request.cmd(Command.SET).arg("foo").arg("bar"))
-//    def get = runWithParentAndHandler(Request.cmd(Command.GET).arg("foo"))
-//
-//    then:
-//    set == "OK"
-//    get == "bar"
-//    assertTraces(2) {
-//      parentTraceWithCommandAndHandler(it, "SET")
-//      parentTraceWithCommandAndHandler(it, "GET")
-//    }
-//  }
+  def "set and get command"() {
+    when:
+    def set = runWithParentAndHandler(Request.cmd(Command.SET).arg("foo").arg("bar"))
+    def get = runWithParentAndHandler(Request.cmd(Command.GET).arg("foo"))
+
+    then:
+    set == "OK"
+    get == "bar"
+    assertTraces(2) {
+      parentTraceWithCommandAndHandler(it, "SET")
+      parentTraceWithCommandAndHandler(it, "GET")
+    }
+  }
 
   def "set and get command without parent"() {
     when:
@@ -76,7 +76,7 @@ class VertxRedisRxForkedTest extends VertxRedisTestBase {
       runUnderTrace("handler") {
         responseToString(r.delegate)
       }
-    }).toObservable().blockingFirst()
+    }).blockingGet()
   }
 
   String runWithParentAndHandler(final Request request) {

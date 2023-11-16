@@ -30,14 +30,14 @@ public class ResponseHandlerWrapper implements Handler<AsyncResult<Response>> {
     if (!handled) {
       AgentScope scope = null;
       try {
-        if (null != clientSpan) {
+        if (clientSpan != null) {
           clientSpan.finish();
         }
-        if (null != parentContinuation) {
+        if (parentContinuation != null) {
           scope = parentContinuation.activate();
         }
       } finally {
-        if (null != scope) {
+        if (scope != null) {
           scope.close();
         }
         handled = true;

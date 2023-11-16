@@ -1,13 +1,6 @@
 import datadog.trace.api.Config
-import io.vertx.core.AsyncResult
-import io.vertx.core.Handler
-import io.vertx.redis.client.Command
-import io.vertx.redis.client.Request
-import io.vertx.redis.client.Response
 
-import static datadog.trace.agent.test.utils.TraceUtils.basicSpan
-
-class VertxRedisV1ForkedTest extends VertxRedisTestBase {
+class Vertx4RedisV1ForkedTest extends Vertx4RedisTestBase {
 
   @Override
   int version() {
